@@ -1,6 +1,7 @@
-from pydantic import BaseModel
-
-from .feilds import PyObjectId
+from pydantic import BaseModel, Field
+from datetime import datetime
+from ..constants import PlayerEnum
+from .fields import PyObjectId
 
 
 class MongoDbModel(BaseModel):
@@ -8,6 +9,8 @@ class MongoDbModel(BaseModel):
         collection_name: str
 
     id: PyObjectId
+    created_at: datetime
+    updated_at: datetime
 
     @classmethod
     def get_collection_name(cls) -> str:
@@ -18,9 +21,15 @@ class StartGame(BaseModel):
     player: str
 
 
-class Game(MongoDbModel, BaseModel):
+class Game(MongoDbModel):
     class Meta:
         collection_name = "games"
 
-    player1: str
-    player2: str
+    player1: str = Field(max_length=20)
+    player2: str | None = Field(max_length=20, default=None)
+
+    move_number: int = 1
+    board: list[list[int]]
+    winner: PlayerEnum | None = None
+
+    finished_at: datetime | None = None

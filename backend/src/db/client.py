@@ -1,13 +1,15 @@
 # src/db/client_async.py
 import importlib
+
 from typing import Any, cast
 from bson import ObjectId, errors as bson_errors
 from fastapi import FastAPI, HTTPException
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.asynchronous.collection import AsyncCollection
-from pymongo.results import InsertOneResult
-
-from src.api.models import MongoDbModel  # keep the name you use in your project
+from pymongo.results import InsertOneResult, DeleteResult, UpdateResult
+from datetime import datetime, timezone
+from ..api.fields import PyObjectId
+from ..api.models import MongoDbModel
 
 
 class MongoDBClient:
@@ -31,6 +33,8 @@ class MongoDBClient:
         self, model: MongoDbModel, data: dict[str, Any]
     ) -> InsertOneResult:
         collection = self.get_collection(model)
+        now = datetime.now(timezone.utc)
+        data |= {"created_at": now, "updated_at": now}
         # AsyncCollection.insert_one is a coroutine — await it
         return await collection.insert_one(data)
 
@@ -44,12 +48,32 @@ class MongoDBClient:
 
         collection = self.get_collection(model)
         result = await collection.find_one({"_id": id})
-        if not result:
-            raise HTTPException(status_code=404, detail="document not found")
+        if result is None:
+            return None  # type: ignore[return-value]
         result = cast(dict[str, Any], result)
         # convert MongoDB _id -> id
         result["id"] = result.pop("_id")
         return result
+
+    async def list(self, model: MongoDbModel) -> list[dict[str, Any]]:
+        collection = self.get_collection(model)
+        result = collection.find({})
+        games = []
+        async for game in result:
+            game = cast(dict[str, Any], game)
+            games.append(game | {"id": game.pop("_id")})
+        return games
+
+    async def delete_many(self, model: MongoDbModel) -> DeleteResult:
+        collection = self.get_collection(model)
+        return await collection.delete_many({})
+
+    async def update_one(
+        self, model: MongoDbModel, id: PyObjectId, data: dict[str, Any]
+    ) -> UpdateResult:
+        collection = self.get_collection(model)
+        data |= {"updated_at": datetime.now(timezone.utc)}
+        return await collection.update_one({"_id": id}, {"$set": data})
 
 
 def get_current_app() -> FastAPI:
