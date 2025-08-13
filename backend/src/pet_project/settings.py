@@ -11,4 +11,4 @@ class AppSettings(BaseSettings):
     MONGO_DB_NAME: str
 
 
-settings = AppSettings()
+settings = AppSettings()  # type: ignore[call-arg]
