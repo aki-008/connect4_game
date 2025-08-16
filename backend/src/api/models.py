@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, NonNegativeInt, ValidationError
+from typing import Any
 from datetime import datetime
 from ..constants import PlayerEnum
 from .fields import PyObjectId
@@ -33,3 +34,23 @@ class Game(MongoDbModel):
     winner: PlayerEnum | None = None
 
     finished_at: datetime | None = None
+
+    @property
+    def next_player_to_move_username(self) -> str | None:
+        return self.player1 if self.move_number % 2 else self.player2
+
+    @property
+    def next_player_to_move_sign(self) -> PlayerEnum:
+        return PlayerEnum.PLAYER1 if self.move_number % 2 else PlayerEnum.PLAYER2  # type: ignore[attr-defined]
+
+
+class MoveInput(BaseModel):
+    player: str
+    col: NonNegativeInt
+
+
+def get_model_safe(model: type[BaseModel], model_data: dict[str, Any]) -> BaseModel:
+    try:
+        return model(**model_data)
+    except ValidationError:
+        return None

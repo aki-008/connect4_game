@@ -48,7 +48,16 @@ DIRECTIONS = [
 
 
 def init_board() -> list[list[int]]:
-    return [[PlayerEnum.EMPTY for _ in range(M) for _ in range(N)]]
+    return [[PlayerEnum.EMPTY for _ in range(M)] for _ in range(N)]
+
+
+def calculate_row_by_col(board: list[list[int]], col: int) -> int | None:
+    if col < 0 or col >= M:
+        return None
+    for row in range(N - 1, -1, -1):
+        if board[row][col] == PlayerEnum.EMPTY:
+            return row
+    return None
 
 
 def is_valid_move(board: list[list[int]], row: int | None, cols: int | None) -> bool:

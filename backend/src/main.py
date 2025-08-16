@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 from .api.views import router as api_router  # always include the router
 from .db.utils import get_mongod
 from typing import AsyncGenerator
+from .core import init_board
+from .constants import N, M
 
 
 @asynccontextmanager
@@ -27,3 +29,11 @@ app.include_router(api_router)  # always include the router
 @app.get("/")
 async def read_root() -> dict[str, str]:
     return {"message": "Hello, sam World!"}
+
+
+# Test the board creation
+test_board = init_board()
+print(f"Test board dimensions: {len(test_board)}x{len(test_board[0])}")
+assert len(test_board) == N, f"Expected {N} rows, got {len(test_board)}"
+assert len(test_board[0]) == M, f"Expected {M} cols, got {len(test_board[0])}"
+print("Board initialization test passed!")

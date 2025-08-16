@@ -1,15 +1,29 @@
-from fastapi import APIRouter, HTTPException, status
+import logging
+from typing import cast
 
-from .models import Game, StartGame
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
+
 from .crud import (
+    delete_games_from_db,
     get_game_by_id,
+    join_new_game,
     list_games_from_db,
     start_new_game,
-    delete_games_from_db,
-    join_new_game,
+    update_game,
 )
 from .fields import PyObjectId
+from .models import Game, MoveInput, StartGame, get_model_safe
+from .shortcuts import make_move
+from .validators import validate
+from .websockets import connection_manager
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/games", tags=["Games"])
 
@@ -66,4 +80,39 @@ async def join_game(game_id: PyObjectId, player_data: StartGame) -> Game:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="game cannot start right now, please try again later",
         )
+
+    await connection_manager.broadcast_game(updated_game)
+
     return updated_game
+
+
+@router.websocket("/ws/{game_id}/")
+async def websocket_game_endpoint(websocket: WebSocket, game_id: PyObjectId) -> None:
+    await connection_manager.connect(websocket, game_id)
+
+    try:
+        while True:
+            move_data = await websocket.receive_json()  # {"col": int}
+
+            # get game and move
+            game = await get_game_by_id(id=game_id)
+            move = get_model_safe(MoveInput, move_data)
+
+            # validate
+            error_msg = validate(game, move)  # type: ignore[arg-type]
+            if error_msg:
+                logger.warning(error_msg)
+                continue
+
+            # make move
+            game = cast(Game, game)
+            move = cast(MoveInput, move)
+            make_move(game, move.col)  # type: ignore[arg-type]
+
+            # update DB
+            updated_game = cast(Game, await update_game(game.id, game.model_dump()))
+
+            # broadcast game to all players
+            await connection_manager.broadcast_game(updated_game)
+    except WebSocketDisconnect:
+        connection_manager.disconnect(websocket, game_id)
