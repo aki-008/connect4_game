@@ -41,7 +41,7 @@ class Game(MongoDbModel):
 
     @property
     def next_player_to_move_sign(self) -> PlayerEnum:
-        return PlayerEnum.PLAYER1 if self.move_number % 2 else PlayerEnum.PLAYER2  # type: ignore[attr-defined]
+        return PlayerEnum.PLAYER1 if self.move_number % 2 else PlayerEnum.PLAYER2
 
 
 class MoveInput(BaseModel):
