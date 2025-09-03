@@ -9,7 +9,7 @@ from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.results import InsertOneResult, DeleteResult, UpdateResult
 from datetime import datetime, timezone
 from ..api.fields import PyObjectId
-from ..api.models import MongoDbModel
+from ..api.models import MongoDBModel
 
 
 class MongoDBClient:
@@ -24,13 +24,13 @@ class MongoDBClient:
             cls.__instance.mongodb = app.mongodb  # type: ignore[attr-defined]
         return cls.__instance
 
-    def get_collection(self, model: MongoDbModel) -> AsyncCollection:
+    def get_collection(self, model: MongoDBModel) -> AsyncCollection:
         collection_name = model.get_collection_name()
         # prefer dict-style access for collection names with unusual characters
         return self.mongodb.get_collection(collection_name)
 
     async def insert(
-        self, model: MongoDbModel, data: dict[str, Any]
+        self, model: MongoDBModel, data: dict[str, Any]
     ) -> InsertOneResult:
         collection = self.get_collection(model)
         now = datetime.now(timezone.utc)
@@ -38,7 +38,7 @@ class MongoDBClient:
         # AsyncCollection.insert_one is a coroutine — await it
         return await collection.insert_one(data)
 
-    async def get(self, model: MongoDbModel, id: str) -> dict[str, Any]:
+    async def get(self, model: MongoDBModel, id: str) -> dict[str, Any]:
         _id = id
         if not isinstance(_id, ObjectId):
             try:
@@ -55,7 +55,7 @@ class MongoDBClient:
         result["id"] = result.pop("_id")
         return result
 
-    async def list(self, model: MongoDbModel) -> list[dict[str, Any]]:
+    async def list(self, model: MongoDBModel) -> list[dict[str, Any]]:
         collection = self.get_collection(model)
         result = collection.find({})
         games = []
@@ -64,12 +64,12 @@ class MongoDBClient:
             games.append(game | {"id": game.pop("_id")})
         return games
 
-    async def delete_many(self, model: MongoDbModel) -> DeleteResult:
+    async def delete_many(self, model: MongoDBModel) -> DeleteResult:
         collection = self.get_collection(model)
         return await collection.delete_many({})
 
     async def update_one(
-        self, model: MongoDbModel, id: PyObjectId, data: dict[str, Any]
+        self, model: MongoDBModel, id: PyObjectId, data: dict[str, Any]
     ) -> UpdateResult:
         collection = self.get_collection(model)
         data |= {"updated_at": datetime.now(timezone.utc)}

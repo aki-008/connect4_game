@@ -1,10 +1,12 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .api.views import router as api_router  # always include the router
 from .db.utils import get_mongod
 from typing import AsyncGenerator
 from .core import init_board
 from .constants import N, M
+from .pet_project.settings import settings
 
 
 @asynccontextmanager
@@ -24,6 +26,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(api_router)  # always include the router
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")

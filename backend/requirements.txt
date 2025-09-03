@@ -1,0 +1,10 @@
+# Runtime dependencies
+fastapi
+uvicorn[standard]
+pydantic-settings
+pymongo
+# Dev dependencies
+ruff
+mypy
+pre-commit
+pytest
